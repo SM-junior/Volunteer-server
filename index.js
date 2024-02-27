@@ -1,12 +1,31 @@
 require('dotenv').config();
 const express = require('express');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+var jwt = require('jsonwebtoken');
 const app = express()
 const cors = require('cors');
 const port = process.env.PORT || 3000;
 
 app.use(cors())
 app.use(express.json())
+
+// verify jwt
+// const verifyJWT=(req,res,next)=>{
+//     const authorization=req.headers.authorization;
+//     if(!authorization){
+//         res.status(403).send({error:true, message: "Unauthorize access"})
+//     }
+//     const token=authorization.split(' ')[1];
+//     jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (error,decoded)=>{
+//         if(error){
+//             res.status(403).send({error:true, message:"Unauthorize access"})
+//         }
+//         else{
+//             req.decoded=decoded;
+//             next()
+//         }
+//     })
+// }
 
 const uri = `mongodb+srv://${process.env.USER_NAME}:${process.env.USER_PASS}@cluster0.n2wd0zs.mongodb.net/?retryWrites=true&w=majority`;
 
@@ -24,6 +43,15 @@ async function run() {
         // Connect the client to the server	(optional starting in v4.7)
         await client.connect();
         // Send a ping to confirm a successful connection
+
+        //JWT
+        app.post('/jwt',(req,res)=>{
+            const user=req.body;
+            console.log(user);
+            const token=jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {expiresIn: '2h'});
+            console.log(token);
+            res.send({token})
+        })
 
         const galleryCollection = client.db('volunteerDB').collection('gallery');
         const galleryCollection2 = client.db('volunteerDB').collection('cart');
@@ -43,18 +71,18 @@ async function run() {
             res.send({ totalGallery: result })
         })
 
-        //getting total no of items from cart collection
+        // getting total no of items from cart collection
         app.get('/totalGallery2', async (req, res) => {
             const result = await galleryCollection2.estimatedDocumentCount();
             res.send({ totalGallery: result })
         })
+        
 
         //post a single data from ui to cart collection
         app.post('/cart', async (req, res) => {
             const user = req.body;
             const result = await galleryCollection2.insertOne(user)
             res.send(result)
-            console.log(user);
         })
 
         // get all data from cart collection
@@ -87,4 +115,3 @@ app.get('/', (req, res) => {
 app.listen(port, () => {
     console.log(`volunteer is running on port ${port}`);
 })
-
